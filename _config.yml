@@ -30,6 +30,7 @@ incremental: false
 plugins:
   - jekyll-seo-tag
   - jekyll-github-metadata
+  - jekyll-include-cache
 
 # Color scheme (light, dark, auto)
 color_scheme: light

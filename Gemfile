@@ -6,4 +6,5 @@ group :jekyll_plugins do
   gem "jekyll-seo-tag", "~> 2.8"
   gem "jekyll-github-metadata", "~> 2.16"
   gem "jekyll-remote-theme"
+  gem "jekyll-include-cache"
 end
