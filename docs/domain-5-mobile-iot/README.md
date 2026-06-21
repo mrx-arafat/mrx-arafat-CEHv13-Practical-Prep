@@ -1,3 +1,12 @@
+---
+layout: default
+title: Domain 5 - Mobile & IoT Security
+parent: Domains
+nav_order: 5
+description: "Android device access via ADB, steganography extraction, and mobile database analysis."
+has_children: true
+---
+
 # Domain 5: Mobile & IoT Security
 
 ## Overview

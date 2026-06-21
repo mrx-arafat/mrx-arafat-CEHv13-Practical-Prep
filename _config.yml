@@ -1,43 +1,116 @@
-# Jekyll Configuration for GitHub Pages
+# Jekyll Configuration - CEH v13 Practical Exam
+# Using "just-the-docs" remote theme for professional documentation
 
-title: CEH v13 Practical Exam - Complete Study Manual
-description: Comprehensive open-book reference guide for CEH v13 Practical Exam (20 challenges, 7 domains, 85+ tools)
-author: mrx-arafat
-email: arafatmrx@gmail.com
-url: https://mrx-arafat.github.io/mrx-arafat-CEHv13-Practical-Prep
+title: CEH v13 Practical Exam
+tagline: Complete Study Manual & Reference Guide
+description: >-
+  Comprehensive open-book reference guide for CEH v13 Practical Exam.
+  20 challenges, 7 domains, 85+ security tools with command syntax and real examples.
+author: Arafat (reduan@wpdeveloper.com)
+email: reduan@wpdeveloper.com
+url: https://ceh-v13-prep.local
 
-# GitHub Pages settings
-markdown: kramdown
-theme: jekyll-default
+# Theme: Just the Docs (remote theme via GitHub Pages)
+remote_theme: just-the-docs/just-the-docs
+# For local development: theme: just-the-docs
 
 # Build settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: highlight
+
+# Build & deployment
+baseurl: ""
 source: .
 destination: _site
 incremental: false
+plugins:
+  - jekyll-seo-tag
+  - jekyll-github-metadata
 
-# Navigation
-nav_order: 1
-has_children: false
-
-# Color scheme
+# Color scheme (light, dark, auto)
 color_scheme: light
+
+# Just the Docs customization
+aux_links:
+  "GitHub Repository":
+    - "https://github.com/mrx-arafat/mrx-arafat-CEHv13-Practical-Prep"
+  "ExamGuide.com":
+    - "https://cehv13.examguide.com"
+
+aux_links_new_tab: true
+
+# Heading anchor links
+heading_anchors: true
 
 # Search
 search_enabled: true
+search_tokenizer_separator: /[\s/]+/
 search.heading_level: 2
 
-# Footer
-footer_content: "CEH v13 Practical Exam Study Guide | 20 Challenges | 7 Domains | 85+ Tools"
+# Table of contents
+toc_levels: 2..3
 
-# Exclude from Jekyll
+# Footer
+footer_content: |
+  Copyright &copy; 2026. CEH v13 Practical Exam Study Guide.
+  Last updated: June 2026. 20 Challenges | 7 Domains | 85+ Tools | 6 Hours Exam
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"
+
+# Callouts (previously mermaid)
+callouts_enabled: true
+callouts:
+  note:
+    title: Note
+    color: blue
+  abstract:
+    title: Abstract
+    color: blue
+  info:
+    title: Info
+    color: blue
+  tip:
+    title: Tip
+    color: green
+  success:
+    title: Success
+    color: green
+  question:
+    title: Question
+    color: yellow
+  warning:
+    title: Warning
+    color: orange
+  failure:
+    title: Failure
+    color: red
+  danger:
+    title: Danger
+    color: red
+  bug:
+    title: Bug
+    color: red
+  example:
+    title: Example
+    color: purple
+  quote:
+    title: Quote
+    color: grey
+
+# Exclude from build
 exclude:
   - .git
   - .gitignore
-  - notes/
-  - '*.pdf'
+  - .jekyll-cache
   - node_modules
   - vendor
-
-# Include docs folder
-include:
-  - docs
+  - notes/
+  - '*.pdf'
+  - Gemfile*
+  - package*.json

@@ -1,3 +1,12 @@
+---
+layout: default
+title: Domain 7 - Wireless Network Cracking
+parent: Domains
+nav_order: 7
+description: "WPA/WPA2 password cracking and wireless network penetration testing with Aircrack-ng."
+has_children: true
+---
+
 # Domain 7: Wireless Network Cracking
 
 ## Overview

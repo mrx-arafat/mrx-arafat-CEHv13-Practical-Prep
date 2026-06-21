@@ -1,7 +1,15 @@
+---
+layout: default
+title: Home
+nav_order: 1
+description: "Complete open-book reference guide for CEH v13 Practical Exam with 20 challenges, 7 domains, and 85+ security tools."
+has_children: false
+---
+
 # CEH v13 Practical Exam - Complete Documentation
 
 **Version:** 2.0 - INTEGRATED WITH ENHANCEMENTS  
-**Last Updated:** June 21, 2026  
+**Last Updated:** June 22, 2026  
 **Status:** GitHub Pages Ready  
 **Exam Duration:** 6 Hours  
 **Passing Score:** 70% (14 out of 20 challenges)  

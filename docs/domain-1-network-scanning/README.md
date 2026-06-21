@@ -1,3 +1,12 @@
+---
+layout: default
+title: Domain 1 - Network Scanning & Enumeration
+parent: Domains
+nav_order: 1
+description: "Host discovery, port scanning, service enumeration using NMAP, SMB, SNMP, and DNS."
+has_children: true
+---
+
 # Domain 1: Network Scanning & Enumeration
 
 ## Overview

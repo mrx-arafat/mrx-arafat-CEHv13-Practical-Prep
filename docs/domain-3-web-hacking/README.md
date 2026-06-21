@@ -1,3 +1,12 @@
+---
+layout: default
+title: Domain 3 - Web Server & Application Hacking
+parent: Domains
+nav_order: 3
+description: "SQL injection, web directory enumeration, parameter tampering, and WordPress exploitation."
+has_children: true
+---
+
 # Domain 3: Web Server & Application Hacking
 
 ## Overview

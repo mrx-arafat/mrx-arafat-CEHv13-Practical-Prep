@@ -1,3 +1,12 @@
+---
+layout: default
+title: Domain 4 - Cryptography & Steganography
+parent: Domains
+nav_order: 4
+description: "Hash cracking, steganography extraction, and PE file analysis with Hashcat and DIE."
+has_children: true
+---
+
 # Domain 4: Cryptography & Steganography
 
 ## Overview

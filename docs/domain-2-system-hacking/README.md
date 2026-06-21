@@ -1,3 +1,12 @@
+---
+layout: default
+title: Domain 2 - System Hacking & Exploitation
+parent: Domains
+nav_order: 2
+description: "Remote Access Trojans, RDP cracking, credential harvesting, and system exploitation techniques."
+has_children: true
+---
+
 # Domain 2: System Hacking & Exploitation
 
 ## Overview

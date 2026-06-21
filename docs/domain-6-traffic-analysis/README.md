@@ -1,3 +1,12 @@
+---
+layout: default
+title: Domain 6 - Traffic Analysis & Sniffing
+parent: Domains
+nav_order: 6
+description: "Wireshark packet analysis, Tcpdump capture, protocol inspection, and DDoS detection."
+has_children: true
+---
+
 # Domain 6: Traffic Analysis & Sniffing
 
 ## Overview
