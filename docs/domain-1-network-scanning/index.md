@@ -306,6 +306,56 @@ nslookup 192.168.1.5
 
 ---
 
+## 1.7 Active Directory - Domain Controller Discovery
+
+### What It Does
+
+In a Windows network, the **Domain Controller (DC)** is the crown jewel — it runs Active Directory and authenticates every user. You find it by its signature service ports. A host with **LDAP (389), Kerberos (88), and Global Catalog (3268)** open is almost certainly a DC.
+
+### DC Service Ports
+
+| Port | Service | Why it marks a DC |
+|------|---------|-------------------|
+| 88 | Kerberos | AD authentication |
+| 389 | LDAP | Directory queries |
+| 636 | LDAPS | LDAP over TLS |
+| 3268 | Global Catalog | Forest-wide LDAP |
+| 3269 | Global Catalog (TLS) | GC over TLS |
+| 53 | DNS | DC usually runs AD DNS |
+
+### Find the Domain Controller
+
+```bash
+# Scan the subnet for DC ports (NO spaces in the port list!)
+nmap -p 88,389,636,3268 192.168.0.0/24
+
+# Host that answers on all of these = the DC
+```
+
+> **⚠️ Syntax:** nmap port lists must have **no spaces** — `-p 88,389,636,3268`, not `-p 88, 389, ...`. A space ends the argument and nmap errors or ignores the rest.
+
+### Get NetBIOS Name and FQDN
+
+Once you've found the DC's IP, pull its hostname/domain with default scripts:
+
+```bash
+# Default scripts on top ports — reveals NetBIOS name + FQDN
+nmap -sC 192.168.0.X --top-ports=20
+
+# More targeted: AD/LDAP info scripts
+nmap -p 389 --script ldap-rootdse 192.168.0.X     # Domain naming context, FQDN
+nmap -p 88  --script krb5-enum-users 192.168.0.X  # Kerberos realm
+nmap -sU -p 137 --script nbstat 192.168.0.X       # NetBIOS name table
+```
+
+**Where the answers show up:**
+- **FQDN / domain** → `ldap-rootdse` output (`defaultNamingContext: DC=corp,DC=local`) or the SSL cert CN in `-sC`.
+- **NetBIOS name** → `nbstat` script or SMB output (e.g. `DC01`).
+
+> **Exam tip:** the question is usually "what's the domain FQDN" or "the DC's NetBIOS name." `nmap -sC` against the DC plus `--script ldap-rootdse` answers both.
+
+---
+
 ## See Also
 
 - **[Commands Reference](commands.html)** - All Domain 1 commands

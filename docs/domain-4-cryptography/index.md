@@ -16,14 +16,15 @@ Encryption protects data. Hash cracking recovers passwords. Steganography hides 
 **Key Topics:**
 - Hash identification & cracking (MD5, SHA1, SHA256, NTLM, bcrypt)
 - File steganography extraction
-- VeraCrypt volume cracking
+- VeraCrypt volume mounting & file counting
+- File/text decryption (AES Tool, BCTextEncoder, CrypTool)
 - PE file analysis (DIE, CFF Explorer)
 - Malware static analysis
 - Registry analysis
 
 **Duration:** 15-30 minutes per task  
 **Difficulty:** Medium to Hard  
-**Tools:** Hashcat, John, Steghide, DIE, CFF Explorer, VeraCrypt
+**Tools:** Hashcat, John, Steghide, DIE, CFF Explorer, VeraCrypt, AES Tool, BCTextEncoder, CrypTool
 
 ---
 
@@ -137,15 +138,68 @@ exiftool Ghostware.exe | grep -i version
 
 ---
 
-## 4.4 VeraCrypt Volume Cracking
+## 4.4 VeraCrypt Volume Mounting
+
+### What It Does
+
+VeraCrypt mounts an encrypted volume/container as a normal drive once you supply the password. CEH practical typically gives you a container file + password, then asks **how many files are inside**.
 
 ```bash
-# Mount volume
+# Mount volume (CLI)
 veracrypt --mount /dev/sdb1 /mnt/encrypted --password=PASSWORD
 
-# Or use GUI
-# VeraCrypt → Select Device → Mount
+# Mount a container file
+veracrypt --mount volume.hc /mnt/encrypted --password=test
 ```
+
+**GUI workflow (CEH lab — answer the "count files" question):**
+1. Open **VeraCrypt** → **Select File...** (or Select Device) → pick the container.
+2. Click a free drive slot → **Mount**.
+3. Enter password (e.g. `test`) → **OK**.
+4. Open the newly mounted drive in Explorer.
+5. **Count the files** inside → that's the answer (e.g. `6`).
+6. **Dismount** when done.
+
+> **Exam tip:** the answer is usually a file count or a specific filename inside the volume. Sort by type/name so you don't miscount hidden or system files.
+
+---
+
+## 4.5 File & Text Decryption Tools (CEH Lab GUI)
+
+These are Windows GUI tools used in CEH iLabs encryption challenges. Each gives you a file/text + a password; you produce the plaintext.
+
+### AES Tool — Decrypt a `.aes` File
+
+> **Goal:** decrypt an `.aes` file. **Password:** `qwerty`
+
+1. Launch **AES Tool** (Advanced Encryption Package / AES Crypt).
+2. Load the `.aes` file (drag in or **Browse**).
+3. Select **Decrypt**.
+4. Enter password `qwerty`.
+5. Run → output is the decrypted original file. Open it to read the answer.
+
+> **CLI equivalent (aescrypt):** `aescrypt -d -p qwerty secret.aes`
+
+### BCTextEncoder — Decode a Hidden IP / Text
+
+> **Goal:** decrypt hidden text (e.g. an IP). **Password:** `Pa$$w0rd` → **Example output:** `10.10.10.31`
+
+1. Open **BCTextEncoder**.
+2. Paste the encoded block into the **Encoded text** pane.
+3. Click **Decode**.
+4. Enter password `Pa$$w0rd`.
+5. The **Decoded** pane shows the plaintext — e.g. the hidden IP `10.10.10.31`.
+
+### CrypTool — Decrypt a Ransomware File
+
+> **Goal:** decrypt `cryt-128–06encr.hex`. **Algorithm:** Twofish. **Result hidden text:** `@!ph@|tE*t`
+
+1. Open **CrypTool** → **File → Open** the `cryt-128–06encr.hex` file.
+2. Menu **Crypt/Decrypt → Symmetric (modern) → Twofish**.
+3. Choose **Decrypt**, supply the key as specified in the task.
+4. Run → output reveals the hidden text `@!ph@|tE*t`.
+
+> **Exam tip:** match the **algorithm** to what the challenge states (Twofish here, but could be AES/DES/RC4). Wrong algorithm = garbage output. The filename hint (`128`) usually = key/block size.
 
 ---
 

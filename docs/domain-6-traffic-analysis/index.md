@@ -30,11 +30,19 @@ Network traffic contains everything: passwords, commands, data exfiltration, att
 
 ## 6.1 Wireshark Basics
 
+### What It Does
+
+Wireshark opens a packet capture (`.pcap`/`.pcapng`) and lets you filter, follow, and read every byte that crossed the wire. In CEH practical you're usually handed a capture file and asked a question: *what's the attacker IP, what password was sent, what file was exfiltrated.* The whole game is **the right display filter + Follow Stream**.
+
+> **Exam tip:** Don't scroll thousands of packets by hand. Filter to narrow the haystack, then right-click → **Follow → TCP Stream** to read the full conversation as plain text. 90% of answers fall out of this.
+
 ### Opening & Filtering
 
 ```
 File → Open → Select .pcap or .pcapng file
 ```
+
+> **Display filter vs capture filter:** the top bar (green = valid) is a *display* filter — `tcp.port == 80`. Capture filters (BPF, set before capture) use different syntax — `port 80`. Exam files are pre-captured, so you use display filters.
 
 ### Common Filters
 
@@ -43,21 +51,47 @@ http                    # HTTP traffic only
 https or tls            # HTTPS traffic
 ip.src == 192.168.1.5   # Source IP
 ip.dst == 10.0.0.1      # Destination IP
+ip.addr == 192.168.1.5  # Either src OR dst (most useful)
 tcp.port == 80          # TCP port
 udp.port == 53          # UDP port
+tcp.flags.syn == 1 && tcp.flags.ack == 0   # SYN-only (scan/flood)
+tcp contains "admin"    # Any TCP packet with this string
+frame contains "password"   # Search whole frame for a string
 mqtt                    # MQTT protocol
 ftp                     # FTP traffic
 dns                     # DNS queries
+icmp                    # Ping / ICMP
 ```
 
-### Finding Credentials
+> **Combine filters:** `&&` (and), `||` (or), `!` (not). Example: `http && ip.addr==10.0.0.5 && http.request.method=="POST"`.
+
+### Finding Credentials — Workflow
 
 ```
-http.request.method == "POST"          # Login attempts
-data contains "password"               # Password fields
-ftp.request.command == 'USER'          # FTP login
+http.request.method == "POST"          # Login attempts (creds in body)
+http.authbasic                         # HTTP Basic Auth (base64 user:pass)
+frame contains "password"              # Any protocol leaking the word
+ftp.request.command == "USER" || ftp.request.command == "PASS"   # FTP login (cleartext)
+telnet                                 # Telnet = fully cleartext
 tcp.port == 3306                       # MySQL traffic
 ```
+
+**Steps to pull a cleartext credential:**
+1. Filter to the protocol (`http`, `ftp`, `telnet`).
+2. Find the login packet (POST / `USER` / `PASS`).
+3. Right-click → **Follow → TCP Stream** → read user + password in the conversation.
+4. HTTP Basic Auth? The header is `Authorization: Basic <base64>` — decode it: `echo dXNlcjpwYXNz | base64 -d`.
+
+### Follow Stream & Export
+
+```
+Right-click packet → Follow → TCP/UDP/HTTP Stream    # Read full conversation
+File → Export Objects → HTTP                          # Pull files/images transferred over HTTP
+Statistics → Protocol Hierarchy                       # What protocols are in this capture?
+Statistics → Conversations                            # Who talked to who, byte/packet counts
+```
+
+> **Exam tip:** "What file did the attacker download/exfiltrate?" → **File → Export Objects → HTTP** lists and saves every transferred file.
 
 ---
 
@@ -159,26 +193,47 @@ tshark -r capture.pcapng -T fields -e field1 -e field2  # Custom
 
 ---
 
-## 6.4 DDoS Attack Analysis
+## 6.4 DDoS / Flood Attack Analysis
 
-### Finding Attacker IP
+### What It Does
 
-```
-Filter: ip.dst == 172.22.10.10
-Look for: IP appearing most frequently as source
-```
+A flood drowns a target in packets from one (DoS) or many (DDoS) sources. In the capture it looks like **one destination hammered by a huge volume of near-identical packets**. Your job: name the attacker IP(s) and the attack type.
 
-### Statistics
+### Finding the Attacker IP
 
 ```
-Statistics → Endpoints
-Shows all source/destination pairs with packet counts
-Identify IP with highest count (attacker)
+Statistics → Conversations → sort by Packets (descending)   # Top talker = attacker
+Statistics → Endpoints → sort by Packets                    # Single IP dominates = source
+Filter: ip.dst == 172.22.10.10                              # Lock to the victim, see who floods it
+```
+
+> **DDoS vs DoS:** many source IPs all hitting one victim = **DDoS**. One source IP = **DoS**. Endpoints/Conversations counts tell you which.
+
+### Identifying the Attack Type (Signatures)
+
+| Attack | Filter / Signature | Tell |
+|--------|--------------------|------|
+| **SYN flood** | `tcp.flags.syn==1 && tcp.flags.ack==0` | Flood of SYNs, no completed handshakes |
+| **ACK flood** | `tcp.flags.ack==1 && tcp.flags.syn==0` | Mass ACKs to a port with no session |
+| **ICMP/Ping flood** | `icmp` | Huge volume of echo requests |
+| **UDP flood** | `udp` | Many UDP packets to random/closed ports |
+| **DNS amplification** | `dns && udp.length > 300` | Big DNS responses to a spoofed victim |
+| **HTTP flood** | `http.request` | Flood of GET/POST from many IPs (L7) |
+
+### Confirming Volume
+
+```
+Statistics → I/O Graph        # Spike in packets/sec = the attack window
+Statistics → Protocol Hierarchy   # One protocol abnormally dominant (e.g. 99% TCP SYN)
 ```
 
 ---
 
 ## 6.5 OS Fingerprinting via TTL
+
+### What It Does
+
+Every OS sets a default starting **TTL** (Time To Live) on outgoing packets. Each router hop decrements it by 1. Read the TTL, round UP to the nearest default, and you know the sender's OS — without scanning it.
 
 ### TTL Values by OS
 
@@ -210,6 +265,10 @@ Filter: ip.src == 203.0.113.45 && ip.ttl  # Check specific attacker
 
 ## 6.6 MQTT IoT Protocol
 
+### What It Does
+
+MQTT is the lightweight publish/subscribe protocol IoT devices use. Sensors **PUBLISH** to a **topic** (e.g. `home/livingroom/temp`); subscribers receive it. On port 1883 it's **unencrypted** — topics, payloads, and often credentials sit in cleartext. Exam asks: what topic, what value, what creds.
+
 ### Common Ports
 
 - 1883 = MQTT (unencrypted)
@@ -237,6 +296,37 @@ Filter: mqtt.topic contains "temp"    # Topic search
 ```bash
 tshark -r capture.pcapng -Y "mqtt.msgtype == 3" -T fields -e mqtt.topic
 ```
+
+> **Exam tip:** MQTT creds ride in the **CONNECT** packet (`mqtt.msgtype == 1`) — fields `mqtt.username` and `mqtt.passwd` in cleartext on port 1883.
+
+---
+
+## 6.7 RAT / C2 Detection in Traffic
+
+### What It Does
+
+A RAT (Remote Access Trojan) makes the infected host **call out** to an attacker's Command & Control (C2) server, then takes commands back. In a capture it shows as an internal host beaconing to a suspicious external IP on an odd port, at regular intervals.
+
+### What to Look For
+
+| Signal | How to Spot It |
+|--------|----------------|
+| **Beaconing** | Same internal→external pair, regular interval (e.g. every 30s). `Statistics → Conversations`, look for steady periodic small packets |
+| **Odd port** | C2 on non-standard ports (4444 Metasploit, 1604, high random). `tcp.port == 4444` |
+| **Reverse shell** | Outbound connection from server to attacker, then interactive text. Follow TCP Stream shows commands/output |
+| **Suspicious external IP** | Internal host talking to an unknown public IP. `ip.dst == <external>` |
+| **DNS tunneling** | Long, random-looking subdomains in DNS queries = data exfil. `dns.qry.name` with abnormal length |
+
+### Filters
+
+```
+tcp.port == 4444                       # Common Metasploit/reverse-shell port
+ip.dst == 203.0.113.66                 # Suspected C2 IP — see all beacons
+tcp.flags.push == 1 && tcp.len > 0     # Interactive shell data (commands/output)
+dns                                    # Then scan for long random subdomains (tunneling)
+```
+
+**Workflow:** `Statistics → Conversations` → spot the internal host beaconing to one external IP → filter that pair → **Follow TCP Stream** → read the C2 commands.
 
 ---
 
